@@ -54,7 +54,7 @@ socket.on("start", (aplayerID) => {
         console.log("My turn - Start");
         setBoard(convertBoardFromGame2AI(botBoard.board));
         let [score, path] = aiMoveWithLastMove(getBoard(), getScorableCellSet(getBoard()), 0, [], 0);
-        console.log(score, path);
+        // console.log(score, path);
         for (let i = 0; i < path.length; i++) {
             console.log("Move " + path[i][0], path[i][1]);
             setTimeout(() => {socket.emit("move", roomID, path[i][0], path[i][1], (result, err) => {console.log(err)})}, 500 * i + 500);
@@ -66,17 +66,25 @@ socket.on("start", (aplayerID) => {
 socket.on("turn", (aplayerID) => {
     if (aplayerID == playerID) {
         // your turn
-        console.log("My turn");
+        console.log(" ######### My turn ######## ");
         setBoard(convertBoardFromGame2AI(botBoard.board));
         printBoard(getBoard());
         let [score, path] = aiMoveWithLastMove(getBoard(), getScorableCellSet(getBoard()), 0, [], 0);
-        console.log(score, path);
+        // console.log(score, path);
         for (let i = 0; i < path.length; i++) {
             console.log("Move " + path[i][0], path[i][1]);
-            setTimeout(() => {socket.emit("move", roomID, path[i][0], path[i][1], (result, err) => {console.log(err)})}, 500 * i + 500);
+            setTimeout(() => {socket.emit("move", roomID, path[i][0], path[i][1], (result, err) => {if (err) console.log(err)})}, 500 * i + 500);
         }
     } else {
         // not your turn
+        console.log(" ^^^^^^^^ Opp turn ^^^^^^^^ ");
+        setBoard(convertBoardFromGame2AI(botBoard.board));
+        printBoard(getBoard());
+        let [score, path] = aiMoveWithLastMove(getBoard(), getScorableCellSet(getBoard()), 0, [], 0);
+        // console.log(score, path);
+        for (let i = 0; i < path.length; i++) {
+            console.log("opp best move " + path[i][0], path[i][1]);
+        }
     }
 });
 socket.on("reveal", (revealed, turnOver) => {

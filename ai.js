@@ -1,4 +1,4 @@
-let input1 = `111010001
+let input = `111010001
 010000100
 010001010
 100010010
@@ -7,7 +7,7 @@ let input1 = `111010001
 010000111
 001111111
 100100001`;
-let input = `000000000
+let input1 = `000000000
 000000000
 000000000
 000000000
@@ -32,9 +32,7 @@ decodeCo = (s) => {
 const width = 9;
 const height = 9;
 
-let boardHash = {
-
-};
+let boardHash = {};
 
 // let boardCount = 0;
 let board = new Array(height * width);
@@ -103,12 +101,12 @@ const aiMove = (board, scorableCell, depth, path, score) => {
             const boardString = convertBoardToString(newBoard);
             if (boardString in boardHash) {
                 // expanded before
+                continue;
                 newScore = boardHash[boardString];
                 if (newScore > max) {
                     max = newScore;
-                    maxMove = [i, j];
+                    maxMove = path.concat([[i, j]]);
                 }
-                continue;
             }
 
             let relatedCell = new Set(scorableCell);
@@ -125,9 +123,9 @@ const aiMove = (board, scorableCell, depth, path, score) => {
             let moveScore = 0;
             moveScore += countCell(newBoard, i, j, width, height, 1, 0);
             moveScore += countCell(newBoard, i, j, width, height, 0, 1);
-            console.log(depth + 1, concatPath([[i,j]]), i, j, score + moveScore, concatPath(path.concat([[i, j]])))
+            // console.log(depth + 1, concatPath([[i,j]]), i, j, score + moveScore, concatPath(path.concat([[i, j]])))
             if (moveScore > 0) {
-                [newScore, bestMove] = aiMove(newBoard, relatedCell, depth + 1, path.concat([[i, j]]), score + moveScore);
+                const [newScore, bestMove] = aiMove(newBoard, relatedCell, depth + 1, path.concat([[i, j]]), score + moveScore);
                 if (newScore > max) {
                     max = newScore;
                     maxMove = bestMove;
@@ -219,15 +217,45 @@ const getBoard = () => {
     return board;
 }
 
+const aiMoveMinOpp = (board, scorableCell, depth, path, score) => {
+    // all possible move
+    let minScore = 99999999;
+    let minMove = [];
+    for (let i = 0; i < height; i++) {
+        for (let j = 0; j < width; j++) {
+            if(!board[i*width+j]) {
+                // possibleMove.push([i, j]);
+                const newBoard = Array.from(board);
+                newBoard[i*width+j] = true;
+                boardHash = {};
+                const [bestScore, bestMoves] = aiMove(newBoard, getScorableCellSet(newBoard), 0, [], 0);
+                if (bestScore < minScore) {
+                    minScore = bestScore;
+                    minMove = [[i, j]];
+                } else if (bestScore == minScore) {
+                    minMove.push([i, j]);
+                }
+            }
+        }
+    }
+    if (minMove.length == 0) {
+        return [0, []];
+    }
+    const minMoveChosen = minMove[Math.floor(Math.random()*minMove.length)];
+    return [minScore, [minMoveChosen]];
+}
+
 const aiMoveWithLastMove = (board, scorableCell, depth, path, score) => {
     let [maxScore, maxPath] = aiMove(board, scorableCell, depth, path, score);
+    console.log("MY_MAX", maxScore, maxPath);
     for (let i = 0; i < maxPath.length; i++) {
         let [r, c] = maxPath[i];
         board[r*width+c] = true;
     }
-    let [maxScore2, maxPath2] = aiMoveRandom(board, scorableCell, depth, path, score);
-    if (maxPath2.length > 0) {
-        return [maxScore, maxPath.concat(maxPath2)];
+    let [minScore, minPath] = aiMoveMinOpp(board, scorableCell, depth, path, score);
+    console.log("OPP_MIN", minScore, minPath);
+    if (minPath.length > 0) {
+        return [maxScore - minScore, maxPath.concat(minPath)];
     } else {
         return [maxScore, maxPath];
     }
@@ -238,15 +266,22 @@ const aiMoveWithLastMove = (board, scorableCell, depth, path, score) => {
 //         const value = input_split[i][j];
 //         if (value === "1") {
 //             board[i * width + j] = true;
-//             boardCount++;
+//             // boardCount++;
 //         } else {
 //             board[i * width + j] = false;
 //         }
 //     }
 // }
+
 // printBoard(board);
-//best = aiMove(board, getScorableCellSet(), 0, [], 0);
-//console.log(best[0], concatPath(best[1]));
+// let [bestScore, bestMove] = aiMove(board, getScorableCellSet(board), 0, [], 0);
+// console.log(bestScore, bestMove);
+// for (let i = 0; i < bestMove.length; i++) {
+//     let [r, c] = bestMove[i];
+//     board[r*width+c] = true;
+// }
+// let [bestScore2, bestMove2] = aiMoveMinOpp(board, getScorableCellSet(board), 0, [], 0);
+// console.log(bestScore2, bestMove2);
 
 module.exports = {
     setBoard,
