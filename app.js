@@ -19,8 +19,8 @@ const gameConfig = {
 
 
 nunjucks.configure("views", {
-    autoescape: true,
-    express: app
+  autoescape: true,
+  express: app
 });
 
 app.use(express.static("public"));
@@ -42,7 +42,7 @@ io.on("connection", (socket) => {
   socket.on("join", (roomID, cb) => {
     console.log("Join game", roomID);
     const playerList = io.of("/").adapter.rooms.get(roomID);
-    if(playerList && playerList.size == 1) {
+    if (playerList && playerList.size == 1) {
       socket.join(roomID);
       cb(roomID);
       startGame(roomID);
@@ -59,7 +59,7 @@ io.on("connection", (socket) => {
     // }
     playerID = games[roomID].player.indexOf(socket.id);
     if (games[roomID].whoToMove == playerID) {
-      if (games[roomID].board[r*games[roomID].width + c] === "X") {
+      if (games[roomID].board[r * games[roomID].width + c] === "X") {
         cb(null, "Already occupied.");
         return;
       }
@@ -68,16 +68,17 @@ io.on("connection", (socket) => {
 
       const [revealed, turnOver] = clickedCell(games[roomID], r, c, playerID);
 
-      if (turnOver) {
-        games[roomID].whoToMove = 1 - games[roomID].whoToMove;
-        io.to(roomID).emit("turn", games[roomID].whoToMove);
-      }
 
       cb(revealed, null);
 
       io.to(roomID).emit("reveal", revealed, turnOver);
       io.to(roomID).emit("last_move", games[roomID].lastMove);
       io.to(roomID).emit("score", games[roomID].score);
+      
+      if (turnOver) {
+        games[roomID].whoToMove = 1 - games[roomID].whoToMove;
+        io.to(roomID).emit("turn", games[roomID].whoToMove);
+      }
 
       if (games[roomID].occupied == games[roomID].width * games[roomID].height) {
         // Game end calculate who win
@@ -138,7 +139,7 @@ const startGame = (roomID) => {
 }
 
 const initBoard = (width, height) => {
-  board = new Array(width*height);
+  board = new Array(width * height);
   board.fill(" ");
   printBoard(board, height, width);
   return {
@@ -153,7 +154,7 @@ const clickedCell = (game, r, c, playerID) => {
   const width = game.width;
   const height = game.height;
   const score = game.score;
-  board[r*width + c] = "X";
+  board[r * width + c] = "X";
   game.occupied += 1;
   let moveScore = 0;
   // Vertical
@@ -173,14 +174,14 @@ const countCell = (board, r, c, width, height, dr, dc) => {
   let count = 0;
   let i = r;
   let j = c;
-  while (board[i*width + j] == "X" && i >= 0 && i < height && j >= 0 && j < width) {
+  while (board[i * width + j] == "X" && i >= 0 && i < height && j >= 0 && j < width) {
     count++;
     i += dr;
     j += dc;
   }
   i = r;
   j = c;
-  while (board[i*width + j] == "X" && i >= 0 && i < height && j >= 0 && j < width) {
+  while (board[i * width + j] == "X" && i >= 0 && i < height && j >= 0 && j < width) {
     count++;
     i -= dr;
     j -= dc;
@@ -197,7 +198,7 @@ const printBoard = (board, height, width) => {
   for (let i = 0; i < height; i++) {
     let s = "";
     for (let j = 0; j < width; j++) {
-      s += board[i*width + j];
+      s += board[i * width + j];
     }
     console.log(s);
   }

@@ -10,6 +10,8 @@ class Board {
         this.height = height;
         this.cells = new Array(height * width);
         this.cells.fill(BOARD_VALUE.EMPTY);
+        this.cellScorable = new Array(height * width);
+        this.cellScorable.fill(false);
         this.lastMove = [null, null];
         this.initBoard();
     }
@@ -22,15 +24,15 @@ class Board {
                 let cell;
                 switch (value) {
                     case BOARD_VALUE.EMPTY:
-                        cell = $(".template .cell").clone().addClass("unreveal").attr("id", `cell_${i}_${j}`).appendTo(row);
+                        cell = $(".template .cell").clone().addClass("unreveal").removeClass("scorable").attr("id", `cell_${i}_${j}`).appendTo(row);
                         cell.find("span").html(String.fromCharCode(65 + i) + "" + (j + 1));
-                    break;
+                        break;
                     case BOARD_VALUE.OCCUPIED:
-                        cell = $(".template .cell").clone().removeClass("unreveal").attr("id", `cell_${i}_${j}`).appendTo(row);
+                        cell = $(".template .cell").clone().removeClass("unreveal scorable").attr("id", `cell_${i}_${j}`).appendTo(row);
                         cell.find("span").html("X");
-                    break;
+                        break;
                     default:
-                        cell = $(".template .cell").clone().removeClass("unreveal").attr("id", `cell_${i}_${j}`).appendTo(row);
+                        cell = $(".template .cell").clone().removeClass("unreveal scorable").attr("id", `cell_${i}_${j}`).appendTo(row);
                         cell.find("span").html(value);
                 }
             }
@@ -47,21 +49,122 @@ class Board {
         return value;
     }
 
+    getCellScorable(row, col) {
+        return this.cellScorable[row * this.width + col];
+    }
+
+    setCellScorable(row, col, value) {
+        this.cellScorable[row * this.width + col] = value;
+        return value;
+    }
+
+    countCell(r, c, dr, dc) {
+        let board = this.cells;
+        let width = this.width;
+        let height = this.height;
+        let count = 0;
+        let i = r;
+        let j = c;
+        while (board[i * width + j] == BOARD_VALUE.OCCUPIED && i >= 0 && i < height && j >= 0 && j < width) {
+            count++;
+            i += dr;
+            j += dc;
+        }
+        i = r;
+        j = c;
+        while (board[i * width + j] == BOARD_VALUE.OCCUPIED && i >= 0 && i < height && j >= 0 && j < width) {
+            count++;
+            i -= dr;
+            j -= dc;
+        }
+        // double counted the center cell
+        count -= 1;
+        if (count % 3 === 0) {
+            return count;
+        }
+        return 0;
+    }
+
     reveal(row, col, value) {
         this.setCell(row, col, value);
-        let cell;
-        switch(value) {
-            case BOARD_VALUE.OCCUPIED:
-                cell = $(`#cell_${row}_${col}`).removeClass("unreveal");
-                cell.find("span").html("X");
-            break;
-            case BOARD_VALUE.EMPTY:
-                cell = $(`#cell_${row}_${col}`).addClass("unreveal");
-                cell.find("span").html("");
-            break;
-            default:
-                cell = $(`#cell_${row}_${col}`).removeClass("unreveal");
-                cell.find("span").html(value);
+
+        // Update scorable
+        for (let i = 0; i < this.width; i++) {
+            if (this.getCell(row, i) === BOARD_VALUE.EMPTY) {
+                this.setCell(row, i, BOARD_VALUE.OCCUPIED);
+                let moveScore = 0;
+                // Need to check both side as it may/may not because of current cell changes
+                // Vertical
+                moveScore += this.countCell(row, i, 1, 0);
+                // Horizontal
+                moveScore += this.countCell(row, i, 0, 1);
+                if (moveScore > 0) {
+                    this.setCellScorable(row, i, true);
+                } else {
+                    this.setCellScorable(row, i, false);
+                }
+                this.setCell(row, i, BOARD_VALUE.EMPTY);
+            }
+
+            let value = this.getCell(row, i);
+
+            let cell;
+            switch (value) {
+                case BOARD_VALUE.OCCUPIED:
+                    cell = $(`#cell_${row}_${i}`).removeClass("unreveal scorable");
+                    cell.find("span").html("X");
+                    break;
+                case BOARD_VALUE.EMPTY:
+                    cell = $(`#cell_${row}_${i}`).addClass("unreveal");
+                    cell.find("span").html(String.fromCharCode(65 + row) + "" + (i + 1));
+                    if (this.getCellScorable(row, i) === true) {
+                        cell.addClass("scorable");
+                    } else {
+                        cell.removeClass("scorable");
+                    }
+                    break;
+                default:
+                    cell = $(`#cell_${row}_${i}`).removeClass("unreveal scorable");
+                    cell.find("span").html(value);
+            }
+        }
+        for (let i = 0; i < this.height; i++) {
+            if (this.getCell(i, col) === BOARD_VALUE.EMPTY) {
+                this.setCell(i, col, BOARD_VALUE.OCCUPIED);
+                let moveScore = 0;
+                // Vertical
+                moveScore += this.countCell(i, col, 1, 0);
+                // Horizontal
+                moveScore += this.countCell(i, col, 0, 1);
+                if (moveScore > 0) {
+                    this.setCellScorable(i, col, true);
+                } else {
+                    this.setCellScorable(i, col, false);
+                }
+                this.setCell(i, col, BOARD_VALUE.EMPTY);
+            }
+
+            let value = this.getCell(i, col);
+
+            let cell;
+            switch (value) {
+                case BOARD_VALUE.OCCUPIED:
+                    cell = $(`#cell_${i}_${col}`).removeClass("unreveal scorable");
+                    cell.find("span").html("X");
+                    break;
+                case BOARD_VALUE.EMPTY:
+                    cell = $(`#cell_${i}_${col}`).addClass("unreveal");
+                    cell.find("span").html(String.fromCharCode(65 + i) + "" + (col + 1));
+                    if (this.getCellScorable(i, col) === true) {
+                        cell.addClass("scorable");
+                    } else {
+                        cell.removeClass("scorable");
+                    }
+                    break;
+                default:
+                    cell = $(`#cell_${i}_${col}`).removeClass("unreveal scorable");
+                    cell.find("span").html(value);
+            }
         }
     }
 
@@ -222,7 +325,7 @@ class GameEngine {
                             } else {
                                 cell = $(`#cell_${i}_${j}`).removeClass("cell-clickable");
                             }
-                        break;
+                            break;
                         default:
                             cell = $(`#cell_${i}_${j}`).removeClass("cell-clickable");
                     }
@@ -253,7 +356,7 @@ class GameEngine {
     }
 }
 
-$(function() {
+$(function () {
     gameEngine = new GameEngine();
     $(".panel-game, .panel-join").hide();
 

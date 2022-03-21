@@ -99,3 +99,7 @@ body {
     background-color: #81afff;
     color: #1943ae;
 }
+
+.scorable:hover {
+    background-color: #52d752;
+}
