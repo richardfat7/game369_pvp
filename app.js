@@ -65,6 +65,7 @@ io.on("connection", (socket) => {
       }
 
       games[roomID].lastMove[playerID] = [r, c];
+      console.log("MOVE", roomID, playerID, r, c);
 
       const [revealed, turnOver] = clickedCell(games[roomID], r, c, playerID);
 
