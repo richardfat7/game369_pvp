@@ -1,3 +1,5 @@
+colors = require("./colors");
+
 let input = `111010001
 010000100
 010001010
@@ -19,9 +21,25 @@ let input1 = `000000000
 
 let input_split = input.split("\n");
 
+encodeCoArray = (aa) => {
+    result = new Array();
+    for (const [i, j] of aa) {
+        result.push(encodeCo([i, j]));
+    }
+    return result;
+}
+
 encodeCo = (a) => {
     return a[0] + "_" + a[1];
 };
+
+decodeCoArray = (aa) => {
+    result = new Array();
+    for (const cell of aa) {
+        result.push(decodeCo(cell));
+    }
+    return result;
+}
 
 decodeCo = (s) => {
     let i, j;
@@ -36,7 +54,9 @@ let boardHash = {};
 
 // let boardCount = 0;
 let board = new Array(height * width);
-const printBoard = (board) => {
+
+const printBoard = (board, scorableCell, step) => {
+    // Only support up to 36 steps
     console.log("  123456789");
     for (let i = 0; i < height; i++) {
         let s = String.fromCharCode(65 + i) + "|";
@@ -44,13 +64,41 @@ const printBoard = (board) => {
             if (board[i * width + j] === true) {
                 s += "X";
             } else {
-                s += " ";
+                let found = false;
+                if (!found && step) {
+                    for (const [index, cell] of step.entries()) {
+                        [i2, j2] = decodeCo(cell);
+                        if (i == i2 && j == j2) {
+                            if (index >= 36) {
+                                s += colors.FgRed + (index - 36).toString(36) + colors.Reset;
+                            } else {
+                                s += colors.FgCyan + index.toString(36) + colors.Reset;
+                            }
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if (!found && scorableCell) {
+                    for (const cell of scorableCell) {
+                        [i2, j2] = decodeCo(cell);
+                        if (i == i2 && j == j2) {
+                            s += colors.FgGreen + "$" + colors.Reset;
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if (!found) {
+                    s += " ";
+                }
             }
         }
         console.log(s);
     }
 }
 
+// Count number of continous cell along +-dr, +-dc from r, c (including r, c), return the value if it mod3 == 0
 const countCell = (board, r, c, width, height, dr, dc) => {
     let count = 0;
     let i = r;
@@ -144,13 +192,13 @@ const aiMoveRandom = (board, scorableCell, depth, path, score) => {
     const list = new Array();
     for (let i = 0; i < height; i++) {
         for (let j = 0; j < width; j++) {
-            if (!board[i*width+j]) {
+            if (!board[i * width + j]) {
                 list.push([i, j]);
             }
         }
     }
     if (list.length > 0) {
-        return [-1, [list[Math.floor(Math.random()*list.length)]]];
+        return [-1, [list[Math.floor(Math.random() * list.length)]]];
     } else {
         return [-1, []];
     }
@@ -223,10 +271,10 @@ const aiMoveMinOpp = (board, scorableCell, depth, path, score) => {
     let minMove = [];
     for (let i = 0; i < height; i++) {
         for (let j = 0; j < width; j++) {
-            if(!board[i*width+j]) {
+            if (!board[i * width + j]) {
                 // possibleMove.push([i, j]);
                 const newBoard = Array.from(board);
-                newBoard[i*width+j] = true;
+                newBoard[i * width + j] = true;
                 boardHash = {};
                 const [bestScore, bestMoves] = aiMove(newBoard, getScorableCellSet(newBoard), 0, [], 0);
                 if (bestScore < minScore) {
@@ -241,24 +289,62 @@ const aiMoveMinOpp = (board, scorableCell, depth, path, score) => {
     if (minMove.length == 0) {
         return [0, []];
     }
-    const minMoveChosen = minMove[Math.floor(Math.random()*minMove.length)];
+    const minMoveChosen = minMove[Math.floor(Math.random() * minMove.length)];
     return [minScore, [minMoveChosen]];
 }
 
 const aiMoveWithLastMove = (board, scorableCell, depth, path, score) => {
-    let [maxScore, maxPath] = aiMove(board, scorableCell, depth, path, score);
+    const newBoard = Array.from(board);
+    let [maxScore, maxPath] = aiMove(newBoard, scorableCell, depth, path, score);
     console.log("MY_MAX", maxScore, maxPath);
     for (let i = 0; i < maxPath.length; i++) {
         let [r, c] = maxPath[i];
-        board[r*width+c] = true;
+        newBoard[r * width + c] = true;
     }
-    let [minScore, minPath] = aiMoveMinOpp(board, scorableCell, depth, path, score);
+    let [minScore, minPath] = aiMoveMinOpp(newBoard, scorableCell, depth, path, score);
     console.log("OPP_MIN", minScore, minPath);
     if (minPath.length > 0) {
         return [maxScore - minScore, maxPath.concat(minPath)];
     } else {
         return [maxScore, maxPath];
     }
+}
+
+const praseBoardString = (input) => {
+    // Example input
+    //`111010001
+    // 010000100
+    // 010001010
+    // 100010010
+    // 001000100
+    // 000100111
+    // 010000111
+    // 001111111
+    // 100100001`;
+    let input_split = input.split("\n");
+    let board = new Array(height * width);
+
+    for (let i = 0; i < height; i++) {
+        for (let j = 0; j < width; j++) {
+            const value = input_split[i][j];
+            if (value === "1") {
+                board[i * width + j] = true;
+                // boardCount++;
+            } else {
+                board[i * width + j] = false;
+            }
+        }
+    }
+    return board;
+}
+
+const executePath = (board, path) => {
+    const newBoard = Array.from(board);
+    for (let i = 0; i < path.length; i++) {
+        let [r, c] = path[i];
+        newBoard[r * width + c] = true;
+    }
+    return newBoard;
 }
 
 // for (let i = 0; i < height; i++) {
@@ -291,5 +377,8 @@ module.exports = {
     convertBoardFromGame2AI,
     aiMoveRandom,
     printBoard,
-    aiMoveWithLastMove
+    aiMoveWithLastMove,
+    praseBoardString,
+    countCell,
+    executePath,
 };

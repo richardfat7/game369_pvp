@@ -40,7 +40,6 @@ const initBoard = (width, height) => {
 
 
 
-socket.connect();
 
 socket.on("disconnect", (reason) => {
 
@@ -119,6 +118,8 @@ socket.on("finish", (winner, revealed) => {
     //         this.board.reveal.bind(this.board)(revealed[i][0], revealed[i][1], revealed[i][3]);
     //     }, revealed[i][2] * 50);
     // }
+
+    // askRoomID();
 });
 socket.on("leave", (revealed) => {
     console.log("Opponenet left");
@@ -129,10 +130,17 @@ socket.on("leave", (revealed) => {
     //         this.board.reveal.bind(this.board)(revealed[i][0], revealed[i][1], revealed[i][3]);
     //     }, revealed[i][2] * 50);
     // }
+    // askRoomID();
 });
 
-rl.question("Room ID? ", function (aRoomID) {
-    socket.emit("join", aRoomID, (retRoomID) => { });
-    roomID = aRoomID
-    rl.close();
-});
+const askRoomID = () => {
+    rl.question("Room ID? ", function (aRoomID) {
+        socket.disconnect();
+        socket.connect();
+        socket.emit("join", aRoomID, (retRoomID) => { });
+        roomID = aRoomID
+        rl.close();
+    });
+}
+
+askRoomID();
